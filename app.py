@@ -20,14 +20,18 @@ import os
 
 app = Flask(__name__)
 
-# 修正配置
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKEN'))
-if not configuration.access_token:
+# 加载并验证环境变量
+channel_secret = os.getenv('CHANNEL_SECRET')
+if not channel_secret:
+    raise ValueError("CHANNEL_SECRET 未正确配置，请检查环境变量。")
+
+channel_access_token = os.getenv('CHANNEL_ACCESS_TOKEN')
+if not channel_access_token:
     raise ValueError("CHANNEL_ACCESS_TOKEN 未正确配置，请检查环境变量。")
 
-line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
-if not line_handler.channel_secret:
-    raise ValueError("CHANNEL_SECRET 未正确配置，请检查环境变量。")
+# 初始化配置
+configuration = Configuration(access_token=channel_access_token)
+line_handler = WebhookHandler(channel_secret)
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -38,7 +42,7 @@ def callback():
     try:
         line_handler.handle(body, signature)
     except InvalidSignatureError:
-        app.logger.info("Invalid signature. Please检查你的 channel access token/channel secret.")
+        app.logger.info("Invalid signature. 请检查你的 channel access token/channel secret.")
         abort(400)
 
     return 'OK'
