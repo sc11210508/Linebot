@@ -1,11 +1,6 @@
 from flask import Flask, request, abort
-
-from linebot.v3 import (
-    WebhookHandler
-)
-from linebot.v3.exceptions import (
-    InvalidSignatureError
-)
+from linebot.v3 import WebhookHandler
+from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration,
     ApiClient,
@@ -25,35 +20,33 @@ import os
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))
-line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
+# 修正配置
+configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKEN'))
+if not configuration.access_token:
+    raise ValueError("CHANNEL_ACCESS_TOKEN 未正确配置，请检查环境变量。")
 
+line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
+if not line_handler.channel_secret:
+    raise ValueError("CHANNEL_SECRET 未正确配置，请检查环境变量。")
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    # get X-Line-Signature header value
-    signature = request.headers['X-Line-Signature']
-
-    # get request body as text
+    signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
 
-    # handle webhook body
     try:
         line_handler.handle(body, signature)
     except InvalidSignatureError:
-        app.logger.info("Invalid signature. Please check your channel access token/channel secret.")
+        app.logger.info("Invalid signature. Please检查你的 channel access token/channel secret.")
         abort(400)
 
     return 'OK'
 
-# 加入好友事件
 @line_handler.add(FollowEvent)
 def handle_follow(event):
     print(f'Got {event.type} event')
 
-
-# 訊息事件
 @line_handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     with ApiClient(configuration) as api_client:
@@ -75,7 +68,7 @@ def handle_message(event):
                     messages=[template_message]
                 )
             )
-        
+
 @line_handler.add(PostbackEvent)
 def handle_postback(event):
     if event.postback.data == 'postback':
