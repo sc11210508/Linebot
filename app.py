@@ -11,23 +11,26 @@ from linebot.v3.messaging import (
     ApiClient,
     MessagingApi,
     ReplyMessageRequest,
-    TemplateMessage,
-    ButtonsTemplate,
-    PostbackAction
+    ImagemapArea,
+    ImagemapBaseSize,
+    ImagemapExternalLink,
+    ImagemapMessage,
+    ImagemapVideo,
+    URIImagemapAction,
+    MessageImagemapAction
 )
 from linebot.v3.webhooks import (
     MessageEvent,
-    FollowEvent,
-    PostbackEvent,
-    TextMessageContent
+    TextMessageContent,
 )
 import os
+
+
 
 app = Flask(__name__)
 
 configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))
 line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
-
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -47,39 +50,51 @@ def callback():
 
     return 'OK'
 
-# 加入好友事件
-@line_handler.add(FollowEvent)
-def handle_follow(event):
-    print(f'Got {event.type} event')
 
-
-# 訊息事件
 @line_handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
+    text = event.message.text
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        if event.message.text == 'postback':
-            buttons_template = ButtonsTemplate(
-                title='Postback Sample',
-                text='Postback Action',
+        if text == '推薦影片':
+            imagemap_base_url = request.url_root + '/static/image'
+            imagemap_base_url = imagemap_base_url.replace("http", "https")
+            video_url = request.url_root + '/static/videopr.mp4'
+            video_url = video_url.replace("http", "https")
+            preview_image_url = request.url_root + '/static/background.jpg'
+            preview_image_url = preview_image_url.replace("http", "https")
+
+            imagemap_message = ImagemapMessage(
+                base_url=imagemap_base_url,
+                alt_text='this is an imagemap',
+                base_size=ImagemapBaseSize(height=1040, width=1040),
+                video=ImagemapVideo(
+                    original_content_url=video_url,
+                    preview_image_url=preview_image_url,
+                    area=ImagemapArea(
+                        x=0, y=0, width=1040, height=520
+                    ),
+                    external_link=ImagemapExternalLink(
+                        link_uri='https://www.youtube.com/@yannilife8',
+                        label='點我看更多',
+                    ),
+                ),
                 actions=[
-                    PostbackAction(label='Postback Action', text='Postback Action Button Clicked!', data='postback'),
-                ])
-            template_message = TemplateMessage(
-                alt_text='Postback Sample',
-                template=buttons_template
+                   
+                    MessageImagemapAction(
+                        text='更多影片',
+                        area=ImagemapArea(
+                            x=0, y=520, width=1040, height=520
+                        )
+                    )
+                ]
             )
-            line_bot_api.reply_message(
+        line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[template_message]
+                    messages=[imagemap_message]
                 )
             )
-        
-@line_handler.add(PostbackEvent)
-def handle_postback(event):
-    if event.postback.data == 'postback':
-        print('Postback event is triggered')
 
 if __name__ == "__main__":
     app.run()
