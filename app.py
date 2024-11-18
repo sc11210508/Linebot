@@ -34,22 +34,17 @@ line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
-
-    # get request body as text
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
 
-    # handle webhook body
     try:
         line_handler.handle(body, signature)
     except InvalidSignatureError:
-        app.logger.info("Invalid signature. Please check your channel access token/channel secret.")
+        app.logger.error("Invalid signature. Please check your channel access token/channel secret.")
         abort(400)
 
     return 'OK'
-
 
 @line_handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -57,13 +52,20 @@ def handle_message(event):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         if text == '推薦影片':
-            imagemap_base_url = request.url_root + '/static/image'
-            imagemap_base_url = imagemap_base_url.replace("http", "https")
-            video_url = request.url_root + '/static/videopr.mp4'
-            video_url = video_url.replace("http", "https")
-            preview_image_url = request.url_root + '/static/background.jpg'
-            preview_image_url = preview_image_url.replace("http", "https")
+            # 构造静态文件的 URL
+            imagemap_base_url = request.url_root + 'static/image'
+            imagemap_base_url = imagemap_base_url.replace("http://", "https://")
+            video_url = request.url_root + 'static/videopr.mp4'
+            video_url = video_url.replace("http://", "https://")
+            preview_image_url = request.url_root + 'static/background.jpg'
+            preview_image_url = preview_image_url.replace("http://", "https://")
 
+            # 打印调试信息
+            app.logger.info(f"Base URL: {imagemap_base_url}")
+            app.logger.info(f"Video URL: {video_url}")
+            app.logger.info(f"Preview Image URL: {preview_image_url}")
+
+            # 创建 ImagemapMessage
             imagemap_message = ImagemapMessage(
                 base_url=imagemap_base_url,
                 alt_text='this is an imagemap',
@@ -80,7 +82,6 @@ def handle_message(event):
                     ),
                 ),
                 actions=[
-                   
                     MessageImagemapAction(
                         text='更多影片',
                         area=ImagemapArea(
@@ -89,12 +90,14 @@ def handle_message(event):
                     )
                 ]
             )
-        line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[imagemap_message]
-                )
-            )
 
-if __name__ == "__main__":
-    app.run()
+            # 发送消息
+            try:
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[imagemap_message]
+                    )
+                )
+            except Exception as e:
+                app.logger.error(f"Error sending reply: {e}")
