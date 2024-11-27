@@ -68,7 +68,7 @@ def handle_message(event):
             # 创建 ImagemapMessage
             imagemap_message = ImagemapMessage(
                 base_url=imagemap_base_url,
-                alt_text='this is an imagemap',
+                alt_text='推薦影片',
                 base_size=ImagemapBaseSize(height=1040, width=1040),
                 video=ImagemapVideo(
                     original_content_url=video_url,
