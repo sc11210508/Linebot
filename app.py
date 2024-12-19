@@ -17,11 +17,11 @@ from linebot.v3.messaging import (
     ImagemapMessage,
     ImagemapVideo,
     URIImagemapAction,
-    MessageImagemapAction
+    MessageImagemapAction,
+    TextMessageContent
 )
 from linebot.v3.webhooks import (
     MessageEvent,
-    TextMessageContent,
 )
 import os
 
@@ -58,7 +58,7 @@ def handle_message(event):
         # 檢查使用者狀態
         if user_id not in user_status:
             # 首次互動，提供選項
-            reply = "請問您想提供的數值是?\n1. 血壓\n2。"
+            reply = "請問您想提供的數值是?\n1. 血壓\n2. 預防妊娠糖尿\n或輸入 '推薦影片' 獲取相關資訊。"
             user_status[user_id] = "awaiting_choice"
         elif user_status[user_id] == "awaiting_choice":
             if text == "1":
