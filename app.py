@@ -7,10 +7,10 @@ import sympy
 app = Flask(__name__)
 
 # LineBot API 和 Webhook Handler 的設置
-LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
+LINE_CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
+LINE_CHANNEL_ACCESS_TOKE = os.getenv('CHANNEL_ACCESS_TOKE')
 
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKE)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 @app.route("/callback", methods=['POST'])
