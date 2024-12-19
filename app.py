@@ -21,17 +21,15 @@ import os
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 修正環境變數名稱
+configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE')) 
 line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
 # 用於記錄使用者狀態
 user_status = {}
 
-
 def generate_secure_url(resource_path):
     url = request.url_root + resource_path
     return url.replace("http://", "https://")
-
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -47,10 +45,9 @@ def callback():
 
     return 'OK'
 
-
 @line_handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    text = event.message.text
+    text = event.message.text.strip().replace("　", " ")  # 去除首尾空格並處理全形空格
     user_id = event.source.user_id
 
     with ApiClient(configuration) as api_client:
@@ -72,7 +69,6 @@ def handle_message(event):
             )
         except Exception as e:
             app.logger.error(f"Error sending reply: {e}")
-
 
 def handle_recommend_video(event, line_bot_api):
     imagemap_base_url = generate_secure_url('static/image')
@@ -114,27 +110,19 @@ def handle_recommend_video(event, line_bot_api):
     except Exception as e:
         app.logger.error(f"Error sending imagemap reply: {e}")
 
-
 def handle_health_features(user_id, text):
     if user_id not in user_status:
-        if "血壓" in text:
+        user_status[user_id] = "awaiting_choice"
+
+    if user_status[user_id] == "awaiting_choice":
+        if "血壓" in text or text == "1":
             reply = "請輸入收縮壓/舒張壓 (例：100/80)"
             user_status[user_id] = "awaiting_blood_pressure"
-        elif "妊娠糖尿" in text:
+        elif "妊娠糖尿" in text or text == "2":
             reply = "請輸入胎數/孕前BMI/孕前至今增加的體重 (例：1/25/5)"
             user_status[user_id] = "awaiting_gdm_data"
         else:
             reply = "請輸入以下關鍵字或選項：\n1. 血壓\n2. 預防妊娠糖尿\n或直接輸入 '推薦影片' 獲取相關資訊。"
-            user_status[user_id] = "awaiting_choice"
-    elif user_status[user_id] == "awaiting_choice":
-        if text == "1":
-            reply = "請輸入收縮壓/舒張壓 (例：100/80)"
-            user_status[user_id] = "awaiting_blood_pressure"
-        elif text == "2":
-            reply = "請輸入胎數/孕前BMI/孕前至今增加的體重 (例：1/25/5)"
-            user_status[user_id] = "awaiting_gdm_data"
-        else:
-            reply = "請輸入正確的選項：1 或 2。"
     elif user_status[user_id] == "awaiting_blood_pressure":
         try:
             systolic, diastolic = map(int, text.split("/"))
@@ -146,7 +134,7 @@ def handle_health_features(user_id, text):
                 reply = f"您的血壓略高，建議保持觀察並注意飲食與休息 ({systolic}/{diastolic})。"
         except:
             reply = "輸入格式錯誤，請重新輸入收縮壓/舒張壓 (例：100/80)。"
-        user_status[user_id] = None
+        user_status[user_id] = "awaiting_choice"
     elif user_status[user_id] == "awaiting_gdm_data":
         try:
             fetus_count, pre_bmi, weight_gain = map(float, text.split("/"))
@@ -161,21 +149,20 @@ def handle_health_features(user_id, text):
                 limit = 20  # 雙胞胎的基本上限
             else:
                 reply = "目前僅支援單胞胎或雙胞胎數據評估。"
-                limit = None
+                user_status[user_id] = "awaiting_choice"
+                return reply
 
-            if limit:
-                if weight_gain > limit:
-                    reply = f"您目前為單胞胎，孕前BMI為 {pre_bmi}，增加體重超過上限 {limit}KG，請注意飲食並洽詢專業醫師評估妊娠糖尿風險。"
-                else:
-                    reply = f"您目前為單胞胎，孕前BMI為 {pre_bmi}，體重增加在合理範圍內，請繼續保持。"
+            if weight_gain > limit:
+                reply = f"您目前為單胞胎，孕前BMI為 {pre_bmi}，增加體重超過上限 {limit}KG，請注意飲食並洽詢專業醫師評估妊娠糖尿風險。"
+            else:
+                reply = f"您目前為單胞胎，孕前BMI為 {pre_bmi}，體重增加在合理範圍內，請繼續保持。"
         except:
             reply = "輸入格式錯誤，請重新輸入胎數/孕前BMI/體重增加 (例：1/25/5)。"
-        user_status[user_id] = None
+        user_status[user_id] = "awaiting_choice"
     else:
         reply = "請選擇要進行的功能：\n1. 血壓\n2. 預防妊娠糖尿"
         user_status[user_id] = "awaiting_choice"
     return reply
-
 
 if __name__ == "__main__":
     app.run(debug=True)
