@@ -21,7 +21,7 @@ import os
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKEN'))  # 修正環境變數名稱
+configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 修正環境變數名稱
 line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
 # 用於記錄使用者狀態
