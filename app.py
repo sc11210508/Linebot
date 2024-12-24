@@ -1,124 +1,76 @@
-
 from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration,
-    ApiClient,
     MessagingApi,
     ReplyMessageRequest,
-    ImagemapArea,
-    ImagemapBaseSize,
-    ImagemapExternalLink,
-    ImagemapMessage,
-    ImagemapVideo,
-    MessageImagemapAction
+    TextMessageContent
 )
 from linebot.v3.webhooks import (
-    MessageEvent,
-    TextMessageContent  # 修正匯入模組位置
+    MessageEvent
 )
-import os
+import re
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 修正環境變數名稱
-line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
-
-# 用於記錄使用者狀態
-user_status = {}
-
+# LINE Bot Token 和 Secret
+line_bot_api = MessagingApi(Configuration(channel_access_token='YOUR_CHANNEL_ACCESS_TOKEN'))
+handler = WebhookHandler('YOUR_CHANNEL_SECRET')
 
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
 
     try:
-        line_handler.handle(body, signature)
+        handler.handle(body, signature)
     except InvalidSignatureError:
-        app.logger.error("Invalid signature. Please check your channel access token/channel secret.")
         abort(400)
-
     return 'OK'
 
-
-@line_handler.add(MessageEvent, message=TextMessageContent)
+@handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     text = event.message.text
-    user_id = event.source.user_id
 
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
+    # 检查用户输入是否包含“计算”或“运算”
+    if "计算" in text or "运算" in text:
+        # 使用正则表达式来检测并执行简单的算式
+        pattern = r'(\d+)\s*([\+\-\*/])\s*(\d+)'
+        match = re.match(pattern, text)
 
-        # 檢查使用者輸入是否為推薦影片
-        if text == "推薦影片":
-            handle_recommend_video(event, line_bot_api)
-            return
+        if match:
+            num1, operator, num2 = match.groups()
+            num1, num2 = float(num1), float(num2)
 
-        # 處理健康功能
-        reply = handle_health_features(user_id, text)
-        try:
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessageContent(text=reply)]
-                )
-            )
-        except Exception as e:
-            app.logger.error(f"Error sending reply: {e}")
+            # 进行运算
+            if operator == '+':
+                result = num1 + num2
+            elif operator == '-':
+                result = num1 - num2
+            elif operator == '*':
+                result = num1 * num2
+            elif operator == '/':
+                if num2 != 0:
+                    result = num1 / num2
+                else:
+                    result = '除数不能为零'
 
+            reply = str(result)
+        else:
+            reply = "请输入有效的算式，如：3 + 5"
+    else:
+        reply = "请使用 '计算' 或 '运算' 来触发计算功能。"
 
-def handle_recommend_video(event, line_bot_api):
-    # 構造靜態文件的 URL
-    imagemap_base_url = request.url_root + 'static/image'
-    imagemap_base_url = imagemap_base_url.replace("http://", "https://")
-    video_url = request.url_root + 'static/videopr.mp4'
-    video_url = video_url.replace("http://", "https://")
-    preview_image_url = request.url_root + 'static/background.jpg'
-    preview_image_url = preview_image_url.replace("http://", "https://")
-
-    # 創建 ImagemapMessage
-    imagemap_message = ImagemapMessage(
-        base_url=imagemap_base_url,
-        alt_text='this is an imagemap',
-        base_size=ImagemapBaseSize(height=1040, width=1040),
-        video=ImagemapVideo(
-            original_content_url=video_url,
-            preview_image_url=preview_image_url,
-            area=ImagemapArea(
-                x=0, y=0, width=1040, height=520
-            ),
-            external_link=ImagemapExternalLink(
-                link_uri='https://www.youtube.com/@yannilife8',
-                label='點我看更多',
-            ),
-        ),
-        actions=[
-            MessageImagemapAction(
-                text='更多影片',
-                area=ImagemapArea(
-                    x=0, y=520, width=1040, height=520
-                )
-            )
-        ]
+    # 发送回复消息
+    line_bot_api.reply_message(
+        ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessageContent(text=reply)]
+        )
     )
 
-    # 发送消息
-    try:
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[imagemap_message]
-            )
-        )
-    except Exception as e:
-        app.logger.error(f"Error sending reply: {e}")
+# 为 Vercel 适配 Flask 的调用方式
+def handler_function(request):
+    return app(request)
 
-
-    
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
