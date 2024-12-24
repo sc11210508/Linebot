@@ -1,122 +1,84 @@
 from flask import Flask, request, abort
-from linebot.v3 import WebhookHandler
-from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.messaging import (
-    Configuration,
-    ApiClient,
-    MessagingApi,
-    ReplyMessageRequest,
-    ImagemapArea,
-    ImagemapBaseSize,
-    ImagemapExternalLink,
-    ImagemapMessage,
-    ImagemapVideo,
-    MessageImagemapAction
-)
-from linebot.v3.webhooks import (
-    MessageEvent,
-    TextMessageContent  # 修正匯入模組位置
-)
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import *
+
 import os
 
+# 初始化 LINE Bot API 和 WebhookHandler
+line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "oscjo4bj4"))
+line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
+
+# 初始化 Flask
 app = Flask(__name__)
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 修正環境變數名稱
-line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
+# 主頁
+@app.route('/')
+def home():
+    return 'Hello, World!'
 
-# 用於記錄使用者狀態
-user_status = {}
-
-
-@app.route("/callback", methods=['POST'])
+# Webhook 路徑，LINE 將發送 POST 請求到這裡
+@app.route("/webhook", methods=['POST'])
 def callback():
+    # 獲取 X-Line-Signature 標頭值
     signature = request.headers['X-Line-Signature']
+    
+    # 獲取請求的原始內容
     body = request.get_data(as_text=True)
+    
     app.logger.info("Request body: " + body)
-
+    
+    # 處理 webhook 請求
     try:
         line_handler.handle(body, signature)
     except InvalidSignatureError:
-        app.logger.error("Invalid signature. Please check your channel access token/channel secret.")
         abort(400)
-
+    
     return 'OK'
 
-
-@line_handler.add(MessageEvent, message=TextMessageContent)
+# 當收到訊息時處理
+@line_handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    text = event.message.text
-    user_id = event.source.user_id
+    user_message = event.message.text
 
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
+    # 根據訊息進行回應
+    if user_message == '血壓':
+        text_message = TextSendMessage(text="請輸入收縮壓/舒張壓 (例：100/80)")
+        line_bot_api.reply_message(event.reply_token, text_message)
 
-        # 檢查使用者輸入是否為推薦影片
-        if text == "推薦影片":
-            handle_recommend_video(event, line_bot_api)
-            return
-
-        # 處理健康功能
-        reply = handle_health_features(user_id, text)
+    elif '/' in user_message:  # 假設格式為收縮壓/舒張壓
         try:
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessageContent(text=reply)]
-                )
-            )
-        except Exception as e:
-            app.logger.error(f"Error sending reply: {e}")
+            systolic, diastolic = map(int, user_message.split('/'))
+            
+            if systolic < 120 and diastolic < 80:
+                text_message = TextSendMessage(text="您的血壓於健康範圍內，請繼續保持")
+            elif systolic >= 140 or diastolic >= 90:
+                text_message = TextSendMessage(text="您的孕期血壓過高，請立即洽詢專業醫師評估是否有現子癲前症的風險")
+            else:
+                text_message = TextSendMessage(text="您的血壓正常範圍內，請繼續保持")
 
+            line_bot_api.reply_message(event.reply_token, text_message)
+        except ValueError:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入有效的血壓數值（例如：100/80）"))
 
-def handle_recommend_video(event, line_bot_api):
-    # 構造靜態文件的 URL
-    imagemap_base_url = request.url_root + 'static/image'
-    imagemap_base_url = imagemap_base_url.replace("http://", "https://")
-    video_url = request.url_root + 'static/videopr.mp4'
-    video_url = video_url.replace("http://", "https://")
-    preview_image_url = request.url_root + 'static/background.jpg'
-    preview_image_url = preview_image_url.replace("http://", "https://")
+    elif user_message == '預防妊娠糖尿':
+        text_message = TextSendMessage(text="請輸入胎數/孕前BMI/孕前至今增加的體重 (例：1/25/5)")
+        line_bot_api.reply_message(event.reply_token, text_message)
 
-    # 創建 ImagemapMessage
-    imagemap_message = ImagemapMessage(
-        base_url=imagemap_base_url,
-        alt_text='this is an imagemap',
-        base_size=ImagemapBaseSize(height=1040, width=1040),
-        video=ImagemapVideo(
-            original_content_url=video_url,
-            preview_image_url=preview_image_url,
-            area=ImagemapArea(
-                x=0, y=0, width=1040, height=520
-            ),
-            external_link=ImagemapExternalLink(
-                link_uri='https://www.youtube.com/@yannilife8',
-                label='點我看更多',
-            ),
-        ),
-        actions=[
-            MessageImagemapAction(
-                text='更多影片',
-                area=ImagemapArea(
-                    x=0, y=520, width=1040, height=520
-                )
-            )
-        ]
-    )
+    elif '/' in user_message:  # 假設格式為 胎數/BMI/體重
+        try:
+            fetus_count, pre_bmi, weight_gain = map(int, user_message.split('/'))
+            
+            weight_limit = 11.3  # 這是示例數值，可以根據需要調整
+            if weight_gain > weight_limit:
+                text_message = TextSendMessage(text="孕前BMI略高，體重超過上限，請注意飲食攝取，並洽詢專業醫師評估是否有現妊娠糖尿的風險")
+            else:
+                text_message = TextSendMessage(text="孕前BMI略高，增加體重上限為11.3KG")
+            
+            line_bot_api.reply_message(event.reply_token, text_message)
+        except ValueError:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入有效的數值（例如：1/25/5）"))
 
-    # 发送消息
-    try:
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[imagemap_message]
-            )
-        )
-    except Exception as e:
-        app.logger.error(f"Error sending reply: {e}")
-
-
-
-
+# 設定主程式運行
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
