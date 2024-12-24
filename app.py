@@ -127,7 +127,7 @@ with ApiClient(configuration) as api_client:
     # )
 
     # 方式二: 使用本地端的圖片
-    with open('./static/1.png', 'rb') as image:
+    with open('static/1.png', 'rb') as image:
         line_bot_blob_api.set_rich_menu_image(
             rich_menu_id=rich_menu_b_id,
             body=bytearray(image.read()),
@@ -241,7 +241,7 @@ with ApiClient(configuration) as api_client:
     ###line_bot_blob_api.set_rich_menu_image(
         ####
     # 方式二: 使用本地端的圖片
-    with open('./static/2.png', 'rb') as image:
+    with open('static/2.png', 'rb') as image:
         line_bot_blob_api.set_rich_menu_image(
             rich_menu_id=rich_menu_b_id,
             body=bytearray(image.read()),
