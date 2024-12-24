@@ -3,10 +3,9 @@ const { Client, middleware } = require('@line/bot-sdk');
 
 // 環境變數設定
 const config = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKE,
-  channelSecret: process.env.CHANNEL_SECRET,
+  channelAccessToken: '4eqeIKlTjlTkhm8P5bldX1x2YHcKt3dX4bB0nTw6JklxJO6a79ckID7QWVOnM4QSVLAbnGIDIFhUh4UV3gfH5i2NQIJrJpSc0ebq4n6So2JsvU33IZYd4XsTqA6s5wHJ3287bIyq2oyeKN6rwlD5RgdB04t89/1O/w1cDnyilFU=',
+  channelSecret: 'a54b625441aadf59c3c161f8ebed4315',
 };
-
 const app = express();
 
 // LINE 的 Middleware
