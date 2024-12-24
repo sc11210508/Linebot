@@ -46,7 +46,7 @@ def handle_message(event):
         reply_message = None
 
         # 血压功能
-        if "血壓" in text:
+        if "子癲前症的風險預測" in text:
             reply_message = TextMessage(text="請輸入收縮壓/舒張壓 (例：100/80)")
 
         elif re.match(r"^\d{2,3}/\d{2,3}$", text):  # 检测血压格式
