@@ -75,16 +75,16 @@ def handle_message(event):
                 if fetus_count == 1:  # 单胎
                     if bmi < 18.5:
                         weight_limits = (12.7, 18.2)
-                        status_message = "您的孕前 BMI 過輕"
+                        status_message = "您的孕前 體重 過輕"
                     elif 18.5 <= bmi < 24:
                         weight_limits = (11.2, 15.9)
-                        status_message = "您的孕前 BMI 正常"
+                        status_message = "您的孕前 體重 正常"
                     elif 24 <= bmi < 27:
                         weight_limits = (6.8, 11.3)
-                        status_message = "您的孕前 BMI 過重"
+                        status_message = "您的孕前 體重 過重"
                     else:
                         weight_limits = (6.8, 6.8)
-                        status_message = "您的孕前 BMI 肥胖"
+                        status_message = "您的孕前 體重 肥胖"
                 elif fetus_count == 2:  # 双胞胎
                     weight_limits = (15.9, 20.4)
                     status_message = "您目前為雙胞胎"
