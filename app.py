@@ -2,14 +2,13 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
-
 import os
 
-# 初始化 LINE Bot API 和 WebhookHandler
-line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "oscjo4bj4"))
-line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
+# 設定 LINE Bot API 和 WebhookHandler
+line_bot_api = LineBotApi(os.getenv("CHANNEL_ACCESS_TOKE"))  # 修正環境變數名稱
+line_handler = WebhookHandler(os.getenv("CHANNEL_SECRET"))
 
-# 初始化 Flask
+# 初始化 Flask 應用
 app = Flask(__name__)
 
 # 主頁
