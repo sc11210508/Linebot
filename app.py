@@ -5,7 +5,7 @@ from linebot.v3.messaging import (
     Configuration,
     MessagingApi,
     ReplyMessageRequest,
-    TextMessageContent
+    TextMessage  # 使用 TextMessage 代替 TextMessageContent
 )
 from linebot.v3.webhooks import (
     MessageEvent
@@ -13,6 +13,7 @@ from linebot.v3.webhooks import (
 import os
 import re
 
+# 初始化 Flask 应用
 app = Flask(__name__)
 
 # 从环境变量中读取 LINE Bot 的访问令牌和密钥
@@ -32,7 +33,7 @@ def callback():
         abort(400)
     return 'OK'
 
-@line_handler.add(MessageEvent, message=TextMessageContent)
+@line_handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     text = event.message.text
 
@@ -69,7 +70,7 @@ def handle_message(event):
     line_bot_api.reply_message(
         ReplyMessageRequest(
             reply_token=event.reply_token,
-            messages=[TextMessageContent(text=reply)]
+            messages=[TextMessage(text=reply)]  # 使用 TextMessage 发送回复
         )
     )
 
