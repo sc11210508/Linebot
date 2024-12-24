@@ -3,8 +3,8 @@ const { Client, middleware } = require('@line/bot-sdk');
 
 // 環境變數設定
 const config = {
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_CHANNEL_SECRET,
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKE,
+  channelSecret: process.env.CHANNEL_SECRET,
 };
 
 const app = express();
