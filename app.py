@@ -6,43 +6,58 @@ from linebot.v3.messaging import (
     RichMenuRequest,
     CreateRichMenuAliasRequest
 )
-import requests
 import os
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))
+# 设置配置
+access_token = os.getenv('CHANNEL_ACCESS_TOKE')
+if not access_token:
+    raise ValueError("Environment variable 'CHANNEL_ACCESS_TOKEN' not set.")
+configuration = Configuration(access_token=access_token)
 
-with ApiClient(configuration) as api_client:
+def create_rich_menu(api_client, menu_data, image_path, alias_id):
+    """
+    创建图文选单并上传图片，设置别名。
+    """
     line_bot_api = MessagingApi(api_client)
     line_bot_blob_api = MessagingApiBlob(api_client)
 
-    # Step 1. 創建圖文選單(圖文選單的大小、名稱、聊天室的文字、按鈕的區域)
-    # 若要可以切換圖文選單，需要在 action 中加入 richmenuswitch
-    # richMenuAliasId:要切換的圖文選單的ID data:按鈕被點擊時送出的資料
-    """
-    "action": {
-        "type": "richmenuswitch",
-        "richMenuAliasId": "richmenu_b",
-        "data": "richmenu-changed-to-b"
-    }
-    """
-    # ============================== 創建圖文選單a ==============================
-    # 這邊就要把其中一個區域的 action 改成 richmenuswitch 並且指定b的別名ID
-    rich_menu_b_str = """{
+    # 创建图文选单
+    rich_menu_id = line_bot_api.create_rich_menu(
+        rich_menu_request=RichMenuRequest.from_json(menu_data)
+    ).rich_menu_id
+
+    # 上传图文选单图片
+    if not os.path.exists(image_path):
+        raise FileNotFoundError(f"Image not found: {image_path}")
+    with open(image_path, 'rb') as image:
+        line_bot_blob_api.set_rich_menu_image(
+            rich_menu_id=rich_menu_id,
+            body=bytearray(image.read()),
+            _headers={'Content-Type': 'image/png'}
+        )
+
+    # 设置图文选单别名
+    line_bot_api.create_rich_menu_alias(
+        CreateRichMenuAliasRequest(
+            rich_menu_alias_id=alias_id,
+            rich_menu_id=rich_menu_id
+        )
+    )
+    return rich_menu_id
+
+with ApiClient(configuration) as api_client:
+    # 图文选单 A 数据
+    rich_menu_a_str = """{
         "size": {
             "width": 2500,
             "height": 1686
         },
         "selected": true,
-        "name": "圖文選單 1",
-        "chatBarText": "查看更多資訊",
+        "name": "图文选单 A",
+        "chatBarText": "查看更多信息",
         "areas": [
             {
-                "bounds": {
-                    "x": 0,
-                    "y": 0,
-                    "width": 833,
-                    "height": 843
-                },
+                "bounds": { "x": 0, "y": 0, "width": 833, "height": 843 },
                 "action": {
                     "type": "richmenuswitch",
                     "richMenuAliasId": "richmenu_b",
@@ -50,119 +65,24 @@ with ApiClient(configuration) as api_client:
                 }
             },
             {
-                "bounds": {
-                    "x": 834,
-                    "y": 0,
-                    "width": 833,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "B"
-                }
-            },
-            {
-                "bounds": {
-                    "x": 1663,
-                    "y": 0,
-                    "width": 834,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "C"
-                }
-            },
-            {
-                "bounds": {
-                    "x": 0,
-                    "y": 843,
-                    "width": 833,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "D"
-                }
-            },
-            {
-                "bounds": {
-                    "x": 834,
-                    "y": 843,
-                    "width": 833,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "E"
-                }
-            },
-            {
-                "bounds": {
-                    "x": 1662,
-                    "y": 843,
-                    "width": 838,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "F"
-                }
+                "bounds": { "x": 834, "y": 0, "width": 833, "height": 843 },
+                "action": { "type": "message", "text": "B" }
             }
         ]
     }"""
-    # 創建的時候會回傳 rich_menu_id
-    rich_menu_b_id = line_bot_api.create_rich_menu(
-        rich_menu_request=RichMenuRequest.from_json(rich_menu_b_str)
-    ).rich_menu_id
 
-    # Step 2. 設定 Rich Menu 的圖片
-    # 方式一: 使用 URL
-    # rich_menu_b_url = "https://example.com/richmenu.png"
-    # response = requests.get(rich_menu_b_url)
-    # line_bot_blob_api.set_rich_menu_image(
-    #     rich_menu_id=rich_menu_b_id,
-    #     body=response.content,
-    #     _headers={'Content-Type': 'image/png'}
-    # )
-
-    # 方式二: 使用本地端的圖片
-    with open('static/1.png', 'rb') as image:
-        line_bot_blob_api.set_rich_menu_image(
-            rich_menu_id=rich_menu_b_id,
-            body=bytearray(image.read()),
-            _headers={'Content-Type': 'image/png'}
-        )
-
-    # Step 3. 將a設定為預設的圖文選單
-    line_bot_api.set_default_rich_menu(rich_menu_b_id)
-
-    # Step 4. 設定圖文選單的別名ID
-    line_bot_api.create_rich_menu_alias(
-        CreateRichMenuAliasRequest(
-            rich_menu_alias_id="richmenu_a", # 想要設定的別名ID
-            rich_menu_id=rich_menu_b_id # 要設定的圖文選單ID
-        )
-    )
-
-    # ============================== 創建圖文選單b ==============================
-    # 這邊就要把其中一個區域的 action 改成 richmenuswitch 並且指定a的別名ID
+    # 图文选单 B 数据
     rich_menu_b_str = """{
         "size": {
             "width": 2500,
             "height": 1686
         },
         "selected": true,
-        "name": "圖文選單 1",
-        "chatBarText": "查看更多資訊",
+        "name": "图文选单 B",
+        "chatBarText": "查看更多信息",
         "areas": [
             {
-                "bounds": {
-                    "x": 0,
-                    "y": 0,
-                    "width": 833,
-                    "height": 843
-                },
+                "bounds": { "x": 0, "y": 0, "width": 833, "height": 843 },
                 "action": {
                     "type": "richmenuswitch",
                     "richMenuAliasId": "richmenu_a",
@@ -170,91 +90,18 @@ with ApiClient(configuration) as api_client:
                 }
             },
             {
-                "bounds": {
-                    "x": 834,
-                    "y": 0,
-                    "width": 833,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "B"
-                }
-            },
-            {
-                "bounds": {
-                    "x": 1663,
-                    "y": 0,
-                    "width": 834,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "C"
-                }
-            },
-            {
-                "bounds": {
-                    "x": 0,
-                    "y": 843,
-                    "width": 833,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "D"
-                }
-            },
-            {
-                "bounds": {
-                    "x": 834,
-                    "y": 843,
-                    "width": 833,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "E"
-                }
-            },
-            {
-                "bounds": {
-                    "x": 1662,
-                    "y": 843,
-                    "width": 838,
-                    "height": 843
-                },
-                "action": {
-                    "type": "message",
-                    "text": "F"
-                }
+                "bounds": { "x": 834, "y": 0, "width": 833, "height": 843 },
+                "action": { "type": "message", "text": "B" }
             }
         ]
     }"""
-    # 創建的時候會回傳 rich_menu_id
-    rich_menu_b_id = line_bot_api.create_rich_menu(
-        rich_menu_request=RichMenuRequest.from_json(rich_menu_b_str)
-    ).rich_menu_id
 
-    # Step 2. 設定 Rich Menu 的圖片
-    # 方式一: 使用 URL
-    ###line_bot_blob_api.set_rich_menu_image(
-        ####
-    # 方式二: 使用本地端的圖片
-    with open('static/2.png', 'rb') as image:
-        line_bot_blob_api.set_rich_menu_image(
-            rich_menu_id=rich_menu_b_id,
-            body=bytearray(image.read()),
-            _headers={'Content-Type': 'image/png'}  
-        )
+    # 创建图文选单 A
+    rich_menu_a_id = create_rich_menu(api_client, rich_menu_a_str, 'static/1.png', 'richmenu_a')
 
-    # Step 3. 因為已經將a設定為預設的圖文選單，所以這邊不用再設定
-    # line_bot_api.set_default_rich_menu(rich_menu_b_id)
+    # 设置默认图文选单
+    line_bot_api = MessagingApi(api_client)
+    line_bot_api.set_default_rich_menu(rich_menu_a_id)
 
-    # Step 4. 設定圖文選單的別名ID
-    line_bot_api.create_rich_menu_alias(
-        CreateRichMenuAliasRequest(
-            rich_menu_alias_id="richmenu_b", # 想要設定的別名ID
-            rich_menu_id=rich_menu_b_id # 要設定的圖文選單ID
-        )
-    )
+    # 创建图文选单 B
+    create_rich_menu(api_client, rich_menu_b_str, 'static/2.png', 'richmenu_b')
