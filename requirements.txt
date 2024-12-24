@@ -3,6 +3,6 @@ flask==3.0.0
 beautifulsoup4==4.6.3
 pandas==1.2.4
 pygsheets==2.0.6
-Requests==2.30.0
-psycopg2_binary==2.9.6
+requests==2.30.0
+psycopg2-binary==2.9.6
 pymongo==4.4.0
