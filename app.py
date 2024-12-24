@@ -135,10 +135,7 @@ def handle_message(event):
             )
             reply_message = imagemap_message
 
-        # 默认响应（防止未匹配到关键字时无响应）
-        if not reply_message:
-            reply_message = TextMessage(text="無法識別的指令，請輸入「血壓」、「預防妊娠糖尿」或「推薦影片」。")
-
+       
         # 回复消息
         line_bot_api.reply_message(
             ReplyMessageRequest(
