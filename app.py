@@ -46,7 +46,7 @@ def handle_message(event):
         reply_message = None
 
         # 血压功能
-        if text.startswith("血壓"):
+        if "血壓" in text:
             reply_message = TextMessage(text="請輸入收縮壓/舒張壓 (例：100/80)")
 
         elif re.match(r"^\d{2,3}/\d{2,3}$", text):  # 检测血压格式
@@ -59,7 +59,7 @@ def handle_message(event):
                 reply_message = TextMessage(text="您的血壓稍高或稍低，建議監測並與醫師討論。")
 
         # 妊娠糖尿功能
-        elif text == "預防妊娠糖尿":
+        elif "預防妊娠糖尿" in text:
             reply_message = TextMessage(text="請輸入胎數/孕前BMI/孕前至今增加的體重 (例：1/25/5)")
 
         elif re.match(r"^\d+/\d+(\.\d+)?/\d+(\.\d+)?$", text):  # 检测妊娠糖尿输入格式
@@ -101,7 +101,7 @@ def handle_message(event):
                     )
 
         # 推薦影片功能
-        elif text == "推薦影片":
+        elif "推薦影片" in text:
             imagemap_base_url = request.url_root + 'static/image'
             imagemap_base_url = imagemap_base_url.replace("http://", "https://")
             video_url = request.url_root + 'static/videopr.mp4'
@@ -131,9 +131,9 @@ def handle_message(event):
             )
             reply_message = imagemap_message
 
-        # 默认响应
+        # 默认响应（防止未匹配到关键字时无响应）
         if not reply_message:
-            reply_message = TextMessage(text="請選擇功能：\n1. 輸入「血壓」開始血壓評估\n2. 輸入「預防妊娠糖尿」開始體重評估\n3. 輸入「推薦影片」查看相關影片")
+            reply_message = TextMessage(text="無法識別的指令，請輸入「血壓」、「預防妊娠糖尿」或「推薦影片」。")
 
         # 回复消息
         line_bot_api.reply_message(
