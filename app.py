@@ -10,13 +10,16 @@ from linebot.v3.messaging import (
 from linebot.v3.webhooks import (
     MessageEvent
 )
+import os
 import re
 
 app = Flask(__name__)
 
-# LINE Bot Token 和 Secret
-line_bot_api = MessagingApi(Configuration(channel_access_token='YOUR_CHANNEL_ACCESS_TOKEN'))
-handler = WebhookHandler('YOUR_CHANNEL_SECRET')
+# 从环境变量中读取 LINE Bot 的访问令牌和密钥
+configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 确保环境变量的名称正确
+line_bot_api = MessagingApi(configuration)
+
+line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))  # 使用 CHANNEL_SECRET 环境变量
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -24,12 +27,12 @@ def callback():
     body = request.get_data(as_text=True)
 
     try:
-        handler.handle(body, signature)
+        line_handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
     return 'OK'
 
-@handler.add(MessageEvent, message=TextMessageContent)
+@line_handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     text = event.message.text
 
@@ -70,7 +73,6 @@ def handle_message(event):
         )
     )
 
-# 为 Vercel 适配 Flask 的调用方式
+# Vercel 环境支持，无需使用 app.run()
 def handler_function(request):
     return app(request)
-
