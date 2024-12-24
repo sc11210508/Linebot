@@ -115,47 +115,6 @@ def handle_recommend_video(event, line_bot_api):
     except Exception as e:
         app.logger.error(f"Error sending reply: {e}")
 
-@line_handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    user_message = event.message.text
-
-    # 根據訊息進行回應
-    if user_message == '血壓':
-        text_message = TextSendMessage(text="請輸入收縮壓/舒張壓 (例：100/80)")
-        line_bot_api.reply_message(event.reply_token, text_message)
-
-    elif '/' in user_message:  # 假設格式為收縮壓/舒張壓
-        try:
-            systolic, diastolic = map(int, user_message.split('/'))
-            
-            if systolic < 120 and diastolic < 80:
-                text_message = TextSendMessage(text="您的血壓於健康範圍內，請繼續保持")
-            elif systolic >= 140 or diastolic >= 90:
-                text_message = TextSendMessage(text="您的孕期血壓過高，請立即洽詢專業醫師評估是否有現子癲前症的風險")
-            else:
-                text_message = TextSendMessage(text="您的血壓正常範圍內，請繼續保持")
-
-            line_bot_api.reply_message(event.reply_token, text_message)
-        except ValueError:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入有效的血壓數值（例如：100/80）"))
-
-    elif user_message == '預防妊娠糖尿':
-        text_message = TextSendMessage(text="請輸入胎數/孕前BMI/孕前至今增加的體重 (例：1/25/5)")
-        line_bot_api.reply_message(event.reply_token, text_message)
-
-    elif '/' in user_message:  # 假設格式為 胎數/BMI/體重
-        try:
-            fetus_count, pre_bmi, weight_gain = map(int, user_message.split('/'))
-            
-            weight_limit = 11.3  # 這是示例數值，可以根據需要調整
-            if weight_gain > weight_limit:
-                text_message = TextSendMessage(text="孕前BMI略高，體重超過上限，請注意飲食攝取，並洽詢專業醫師評估是否有現妊娠糖尿的風險")
-            else:
-                text_message = TextSendMessage(text="孕前BMI略高，增加體重上限為11.3KG")
-            
-            line_bot_api.reply_message(event.reply_token, text_message)
-        except ValueError:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入有效的數值（例如：1/25/5）"))
 
 
 
