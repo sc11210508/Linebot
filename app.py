@@ -1,22 +1,9 @@
-from flask import Flask, request, abort
-from linebot.v3 import WebhookHandler
-from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.messaging import (
-    Configuration,
-    ApiClient,
-    MessagingApi,
-    ReplyMessageRequest,
-    TextMessageContent
-)
-import os
+from linebot import LineBotApi, WebhookHandler
+from linebot.models import TextMessage
 
-app = Flask(__name__)
-
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 用您自己的TOKEN
-line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))  # 用您自己的SECRET
-
-# 用於記錄使用者狀態
-user_status = {}
+# 替換您的 channel_access_token 和 channel_secret
+line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))  # 確保在環境變數中設定
+line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))  # 同上
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -38,81 +25,52 @@ def handle_message(event):
     text = event.message.text
     user_id = event.source.user_id
 
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
+    # 判斷輸入內容
+    if text == "推薦影片":
+        handle_recommend_video(event)
+        return
 
-        # 檢查使用者輸入是否為推薦影片
-        if text == "推薦影片":
-            handle_recommend_video(event, line_bot_api)
-            return
+    # 血壓檢測或妊娠糖尿
+    reply = handle_health_features(text)
+    try:
+        line_bot_api.reply_message(
+            event.reply_token, TextMessage(text=reply)
+        )
+    except Exception as e:
+        app.logger.error(f"Error sending reply: {e}")
+        line_bot_api.reply_message(event.reply_token, TextMessage(text="發送訊息錯誤，請稍後再試！"))
 
-        # 處理健康功能
-        reply = handle_health_features(user_id, text)
-        try:
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessageContent(text=reply)]
-                )
-            )
-        except Exception as e:
-            app.logger.error(f"Error sending reply: {e}")
-
-
-def handle_recommend_video(event, line_bot_api):
-    # 創建推薦影片的消息，這部分與您的原本代碼相同
+def handle_recommend_video(event):
+    # 創建推薦影片消息
     imagemap_base_url = request.url_root + 'static/image'
-    imagemap_base_url = imagemap_base_url.replace("http://", "https://")
     video_url = request.url_root + 'static/videopr.mp4'
-    video_url = video_url.replace("http://", "https://")
     preview_image_url = request.url_root + 'static/background.jpg'
-    preview_image_url = preview_image_url.replace("http://", "https://")
 
-    # 創建 ImagemapMessage
-    imagemap_message = ImagemapMessage(
+    # 實現簡化的影片推薦邏輯
+    video_message = ImagemapMessage(
         base_url=imagemap_base_url,
-        alt_text='this is an imagemap',
+        alt_text='影片推薦',
         base_size=ImagemapBaseSize(height=1040, width=1040),
         video=ImagemapVideo(
             original_content_url=video_url,
             preview_image_url=preview_image_url,
-            area=ImagemapArea(
-                x=0, y=0, width=1040, height=520
-            ),
-            external_link=ImagemapExternalLink(
-                link_uri='https://www.youtube.com/@yannilife8',
-                label='點我看更多',
-            ),
+            area=ImagemapArea(x=0, y=0, width=1040, height=520)
         ),
         actions=[MessageImagemapAction(
-            text='更多影片',
+            text='觀看更多',
             area=ImagemapArea(x=0, y=520, width=1040, height=520)
         )]
     )
 
-    # 發送消息
-    try:
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[imagemap_message]
-            )
-        )
-    except Exception as e:
-        app.logger.error(f"Error sending reply: {e}")
+    line_bot_api.reply_message(event.reply_token, video_message)
 
 
-def handle_health_features(user_id, text):
-    # 假設健康功能處理邏輯
-
-    # 解析用戶輸入的數據
+def handle_health_features(text):
     if text.startswith("血壓"):
         try:
-            # 去掉 "血壓" 關鍵字，然後處理
             bp = text.replace("血壓", "").strip()
             bp_values = bp.split("/")
 
-            # 確保格式正確
             if len(bp_values) == 2:
                 systolic, diastolic = int(bp_values[0]), int(bp_values[1])
 
