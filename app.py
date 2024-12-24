@@ -1,3 +1,4 @@
+
 from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -6,7 +7,6 @@ from linebot.v3.messaging import (
     ApiClient,
     MessagingApi,
     ReplyMessageRequest,
-    TextMessage,  # 使用 TextMessage
     ImagemapArea,
     ImagemapBaseSize,
     ImagemapExternalLink,
@@ -14,16 +14,20 @@ from linebot.v3.messaging import (
     ImagemapVideo,
     MessageImagemapAction
 )
-from linebot.v3.webhooks import MessageEvent
+from linebot.v3.webhooks import (
+    MessageEvent,
+    TextMessageContent  # 修正匯入模組位置
+)
 import os
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 確保環境變數名稱正確
+configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 修正環境變數名稱
 line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
 # 用於記錄使用者狀態
 user_status = {}
+
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -40,7 +44,7 @@ def callback():
     return 'OK'
 
 
-@line_handler.add(MessageEvent, message=TextMessage)  # 使用 TextMessage 來處理訊息
+@line_handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     text = event.message.text
     user_id = event.source.user_id
@@ -59,7 +63,7 @@ def handle_message(event):
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text=reply)]  # 使用 TextMessage 來回覆訊息
+                    messages=[TextMessageContent(text=reply)]
                 )
             )
         except Exception as e:
@@ -113,15 +117,8 @@ def handle_recommend_video(event, line_bot_api):
         app.logger.error(f"Error sending reply: {e}")
 
 
-def handle_health_features(user_id, text):
-    # 處理血壓檢測或妊娠糖尿風險的邏輯
-    if text == "血壓":
-        return "請輸入收縮壓/舒張壓 (例：100/80)"
-    elif text == "妊娠糖尿風險":
-        return "請輸入胎數/孕前BMI/孕前至今增加的體重 (例：1/25/5)"
-    else:
-        return "無法識別您的請求，請再試一次"
+    
+
 
 if __name__ == "__main__":
     app.run(debug=True)
-
