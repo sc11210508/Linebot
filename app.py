@@ -115,61 +115,48 @@ def handle_recommend_video(event, line_bot_api):
     except Exception as e:
         app.logger.error(f"Error sending reply: {e}")
 
+@line_handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_message = event.message.text
 
-def handle_health_features(user_id, text):
-    if user_id not in user_status:
-        # 首次互動，提供選項
-        reply = "請問您想提供的數值是?\n1. 血壓\n2. 預防妊娠糖尿"
-        user_status[user_id] = "awaiting_choice"
-    elif user_status[user_id] == "awaiting_choice":
-        if text == "1":
-            reply = "請輸入收縮壓/舒張壓 (例：100/80)"
-            user_status[user_id] = "awaiting_blood_pressure"
-        elif text == "2":
-            reply = "請輸入胎數/孕前BMI/孕前至今增加的體重 (例：1/25/5)"
-            user_status[user_id] = "awaiting_gdm_data"
-        else:
-            reply = "請輸入正確的選項：1 或 2。"
-    elif user_status[user_id] == "awaiting_blood_pressure":
+    # 根據訊息進行回應
+    if user_message == '血壓':
+        text_message = TextSendMessage(text="請輸入收縮壓/舒張壓 (例：100/80)")
+        line_bot_api.reply_message(event.reply_token, text_message)
+
+    elif '/' in user_message:  # 假設格式為收縮壓/舒張壓
         try:
-            systolic, diastolic = map(int, text.split("/"))
+            systolic, diastolic = map(int, user_message.split('/'))
+            
             if systolic < 120 and diastolic < 80:
-                reply = f"您的血壓於健康範圍內，請繼續保持 ({systolic}/{diastolic})。"
+                text_message = TextSendMessage(text="您的血壓於健康範圍內，請繼續保持")
             elif systolic >= 140 or diastolic >= 90:
-                reply = f"您的孕期血壓過高 ({systolic}/{diastolic})，請立即洽詢專業醫師評估是否有現子癲前症的風險。"
+                text_message = TextSendMessage(text="您的孕期血壓過高，請立即洽詢專業醫師評估是否有現子癲前症的風險")
             else:
-                reply = f"您的血壓略高，建議保持觀察並注意飲食與休息 ({systolic}/{diastolic})。"
-        except:
-            reply = "輸入格式錯誤，請重新輸入收縮壓/舒張壓 (例：100/80)。"
-        user_status[user_id] = None
-    elif user_status[user_id] == "awaiting_gdm_data":
-        try:
-            fetus_count, pre_bmi, weight_gain = map(float, text.split("/"))
-            if fetus_count == 1:
-                if pre_bmi < 18.5:
-                    limit = 18
-                elif 18.5 <= pre_bmi < 24.9:
-                    limit = 16
-                else:
-                    limit = 11.3
-            elif fetus_count == 2:
-                limit = 20  # 雙胞胎的基本上限
-            else:
-                reply = "目前僅支援單胞胎或雙胞胎數據評估。"
-                limit = None
+                text_message = TextSendMessage(text="您的血壓正常範圍內，請繼續保持")
 
-            if limit:
-                if weight_gain > limit:
-                    reply = f"您目前為單胞胎，孕前BMI為 {pre_bmi}，增加體重超過上限 {limit}KG，請注意飲食並洽詢專業醫師評估妊娠糖尿風險。"
-                else:
-                    reply = f"您目前為單胞胎，孕前BMI為 {pre_bmi}，體重增加在合理範圍內，請繼續保持。"
-        except:
-            reply = "輸入格式錯誤，請重新輸入胎數/孕前BMI/體重增加 (例：1/25/5)。"
-        user_status[user_id] = None
-    else:
-        reply = "請選擇要進行的功能：\n1. 血壓\n2. 預防妊娠糖尿"
-        user_status[user_id] = "awaiting_choice"
-    return reply
+            line_bot_api.reply_message(event.reply_token, text_message)
+        except ValueError:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入有效的血壓數值（例如：100/80）"))
+
+    elif user_message == '預防妊娠糖尿':
+        text_message = TextSendMessage(text="請輸入胎數/孕前BMI/孕前至今增加的體重 (例：1/25/5)")
+        line_bot_api.reply_message(event.reply_token, text_message)
+
+    elif '/' in user_message:  # 假設格式為 胎數/BMI/體重
+        try:
+            fetus_count, pre_bmi, weight_gain = map(int, user_message.split('/'))
+            
+            weight_limit = 11.3  # 這是示例數值，可以根據需要調整
+            if weight_gain > weight_limit:
+                text_message = TextSendMessage(text="孕前BMI略高，體重超過上限，請注意飲食攝取，並洽詢專業醫師評估是否有現妊娠糖尿的風險")
+            else:
+                text_message = TextSendMessage(text="孕前BMI略高，增加體重上限為11.3KG")
+            
+            line_bot_api.reply_message(event.reply_token, text_message)
+        except ValueError:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入有效的數值（例如：1/25/5）"))
+
 
 
 if __name__ == "__main__":
