@@ -6,24 +6,14 @@ from linebot.v3.messaging import (
     ApiClient,
     MessagingApi,
     ReplyMessageRequest,
-    ImagemapArea,
-    ImagemapBaseSize,
-    ImagemapExternalLink,
-    ImagemapMessage,
-    ImagemapVideo,
-    MessageImagemapAction
-)
-from linebot.v3.webhooks import (
-    MessageEvent,
     TextMessageContent
 )
 import os
 
 app = Flask(__name__)
 
-# 使用正確的環境變數名稱
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  
-line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
+configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))  # 用您自己的TOKEN
+line_handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))  # 用您自己的SECRET
 
 # 用於記錄使用者狀態
 user_status = {}
@@ -70,7 +60,7 @@ def handle_message(event):
 
 
 def handle_recommend_video(event, line_bot_api):
-    # 構造靜態文件的 URL
+    # 創建推薦影片的消息，這部分與您的原本代碼相同
     imagemap_base_url = request.url_root + 'static/image'
     imagemap_base_url = imagemap_base_url.replace("http://", "https://")
     video_url = request.url_root + 'static/videopr.mp4'
@@ -94,17 +84,13 @@ def handle_recommend_video(event, line_bot_api):
                 label='點我看更多',
             ),
         ),
-        actions=[
-            MessageImagemapAction(
-                text='更多影片',
-                area=ImagemapArea(
-                    x=0, y=520, width=1040, height=520
-                )
-            )
-        ]
+        actions=[MessageImagemapAction(
+            text='更多影片',
+            area=ImagemapArea(x=0, y=520, width=1040, height=520)
+        )]
     )
 
-    # 发送消息
+    # 發送消息
     try:
         line_bot_api.reply_message(
             ReplyMessageRequest(
@@ -122,11 +108,13 @@ def handle_health_features(user_id, text):
     # 解析用戶輸入的數據
     if text.startswith("血壓"):
         try:
-            bp = text.split("/")
+            # 去掉 "血壓" 關鍵字，然後處理
+            bp = text.replace("血壓", "").strip()
+            bp_values = bp.split("/")
 
-            # 確保輸入正確
-            if len(bp) == 2:
-                systolic, diastolic = int(bp[0]), int(bp[1])
+            # 確保格式正確
+            if len(bp_values) == 2:
+                systolic, diastolic = int(bp_values[0]), int(bp_values[1])
 
                 # 血壓判斷
                 if systolic < 120 and diastolic < 80:
@@ -136,10 +124,10 @@ def handle_health_features(user_id, text):
                 else:
                     return "您的血壓接近健康範圍，請注意保持良好生活習慣"
             else:
-                return "請輸入正確格式的血壓 (例：100/80)"
+                return "請輸入正確格式的血壓 (例：血壓 100/80)"
         except ValueError:
-            return "血壓數值無效，請重新輸入。"
-
+            return "血壓數值無效，請重新輸入正確的格式 (例：血壓 100/80)"
+    
     elif text.startswith("妊娠糖尿"):
         try:
             data = text.split("/")
@@ -153,11 +141,12 @@ def handle_health_features(user_id, text):
                 else:
                     return f"您的體重增加在正常範圍內，單胞胎孕期BMI為 {pre_bmi}，體重增加上限為 {weight_limit} kg"
             else:
-                return "請輸入正確格式的數據 (例：1/25/5)"
+                return "請輸入正確格式的數據 (例：妊娠糖尿 1/25/5)"
         except ValueError:
             return "妊娠糖尿數值無效，請重新輸入。"
-    
+
     return "無法識別您的需求，請重新輸入。"
+
 
 if __name__ == "__main__":
     app.run(debug=True)
