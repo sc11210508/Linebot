@@ -38,7 +38,7 @@ def handle_message(event):
     text = event.message.text
 
     # 检查用户输入是否包含“计算”或“运算”
-    if "计算" in text or "运算" in text:
+    if "計算" in text or "運算" in text:
         # 使用正则表达式来检测并执行简单的算式
         pattern = r'(\d+)\s*([\+\-\*/])\s*(\d+)'
         match = re.match(pattern, text)
