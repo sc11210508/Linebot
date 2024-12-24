@@ -127,7 +127,7 @@ with ApiClient(configuration) as api_client:
     # )
 
     # 方式二: 使用本地端的圖片
-    with open('static/1.png', 'rb') as image:
+    with open('./static/1.png', 'rb') as image:
         line_bot_blob_api.set_rich_menu_image(
             rich_menu_id=rich_menu_b_id,
             body=bytearray(image.read()),
@@ -238,14 +238,20 @@ with ApiClient(configuration) as api_client:
 
     # Step 2. 設定 Rich Menu 的圖片
     # 方式一: 使用 URL
-    ###line_bot_blob_api.set_rich_menu_image(
-        ####
+    rich_menu_b_url = "https://example.com/richmenu.png"
+    response = requests.get(rich_menu_b_url)
+    line_bot_blob_api.set_rich_menu_image(
+        rich_menu_id=rich_menu_b_id,
+        body=response.content,
+        _headers={'Content-Type': 'image/png'}
+    )
+
     # 方式二: 使用本地端的圖片
-    with open('static/2.png', 'rb') as image:
+    with open('./static/2.png', 'rb') as image:
         line_bot_blob_api.set_rich_menu_image(
             rich_menu_id=rich_menu_b_id,
             body=bytearray(image.read()),
-            _headers={'Content-Type': 'image/png'}  
+            _headers={'Content-Type': 'image/png'}
         )
 
     # Step 3. 因為已經將a設定為預設的圖文選單，所以這邊不用再設定
