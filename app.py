@@ -9,7 +9,7 @@ from linebot.v3.messaging import (
 import requests
 import os
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKEN'))
+configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKE'))
 
 with ApiClient(configuration) as api_client:
     line_bot_api = MessagingApi(api_client)
