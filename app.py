@@ -65,40 +65,44 @@ def handle_message(event):
         elif re.match(r"^\d+/\d+(\.\d+)?/\d+(\.\d+)?$", text):  # 检测妊娠糖尿输入格式
             data = list(map(float, text.split('/')))
             fetus_count, bmi, weight_gain = data
-            weight_limits = None
-            status_message = ""
 
-            if fetus_count == 1:  # 单胎
-                if bmi < 18.5:
-                    weight_limits = (12.7, 18.2)
-                    status_message = "您的孕前 BMI 過輕"
-                elif 18.5 <= bmi < 24:
-                    weight_limits = (11.2, 15.9)
-                    status_message = "您的孕前 BMI 正常"
-                elif 24 <= bmi < 27:
-                    weight_limits = (6.8, 11.3)
-                    status_message = "您的孕前 BMI 過重"
-                else:
-                    weight_limits = (6.8, 6.8)
-                    status_message = "您的孕前 BMI 肥胖"
-            elif fetus_count == 2:  # 双胞胎
-                weight_limits = (15.9, 20.4)
-                status_message = "您目前為雙胞胎"
-            elif fetus_count == 3:  # 三胞胎
-                weight_limits = (20.4, 25.0)
-                status_message = "您目前為三胞胎"
+            if fetus_count > 3:  # 检测是否超过三胎
+                reply_message = TextMessage(text="目前只支援三胎，請聯繫專業醫師獲取建議！")
+            else:
+                weight_limits = None
+                status_message = ""
 
-            if weight_limits:
-                max_gain = weight_limits[1]
-                excess_weight = weight_gain - max_gain
-                if excess_weight > 0:
-                    reply_message = TextMessage(
-                        text=f"{status_message}，增加體重超過上限 {max_gain:.1f}kg，請注意飲食攝取，並洽詢專業醫師評估是否有現妊娠糖尿的風險！"
-                    )
-                else:
-                    reply_message = TextMessage(
-                        text=f"{status_message}，建議增加體重範圍為 {weight_limits[0]:.1f}~{weight_limits[1]:.1f}kg，您目前的體重變化符合健康標準，請繼續保持！"
-                    )
+                if fetus_count == 1:  # 单胎
+                    if bmi < 18.5:
+                        weight_limits = (12.7, 18.2)
+                        status_message = "您的孕前 BMI 過輕"
+                    elif 18.5 <= bmi < 24:
+                        weight_limits = (11.2, 15.9)
+                        status_message = "您的孕前 BMI 正常"
+                    elif 24 <= bmi < 27:
+                        weight_limits = (6.8, 11.3)
+                        status_message = "您的孕前 BMI 過重"
+                    else:
+                        weight_limits = (6.8, 6.8)
+                        status_message = "您的孕前 BMI 肥胖"
+                elif fetus_count == 2:  # 双胞胎
+                    weight_limits = (15.9, 20.4)
+                    status_message = "您目前為雙胞胎"
+                elif fetus_count == 3:  # 三胞胎
+                    weight_limits = (20.4, 25.0)
+                    status_message = "您目前為三胞胎"
+
+                if weight_limits:
+                    max_gain = weight_limits[1]
+                    excess_weight = weight_gain - max_gain
+                    if excess_weight > 0:
+                        reply_message = TextMessage(
+                            text=f"{status_message}，增加體重超過上限 {max_gain:.1f}kg，請注意飲食攝取，並洽詢專業醫師評估是否有現妊娠糖尿的風險！"
+                        )
+                    else:
+                        reply_message = TextMessage(
+                            text=f"{status_message}，建議增加體重範圍為 {weight_limits[0]:.1f}~{weight_limits[1]:.1f}kg，您目前的體重變化符合健康標準，請繼續保持！"
+                        )
 
         # 推薦影片功能
         elif "推薦影片" in text:
